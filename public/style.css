@@ -44,10 +44,12 @@ body {
 }
 
 /* --- Verborgen audio-infrastructuur (Feature 2) ------------- */
+/* Off-screen geplaatst zodat het iframe nooit zichtbaar is,
+   maar de audio gewoon doorspeelt. */
 #yt-host {
   position: fixed;
-  right: 0;
-  bottom: 0;
+  left: -10000px;
+  top: 0;
   width: 320px;
   height: 180px;
   z-index: 1;
@@ -119,4 +121,255 @@ body {
   50% {
     height: 60px;
   }
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   Feature 3 — Setup scherm
+   ============================================================ */
+.setup-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 20px 64px;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: clamp(64px, 12vw, 120px);
+  letter-spacing: 6px;
+  color: var(--accent);
+  line-height: 0.9;
+}
+
+.tagline {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #8a8a93;
+  margin: 6px 0 32px;
+  text-align: center;
+}
+
+.panel {
+  width: 100%;
+  max-width: 520px;
+  background: var(--card);
+  border: 1px solid #24242e;
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #8a8a93;
+  margin-top: 14px;
+}
+.field-label:first-child {
+  margin-top: 0;
+}
+
+.win-value {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.theme-input,
+.team-name-input {
+  width: 100%;
+  background: #0c0c10;
+  border: 1px solid #2c2c38;
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  padding: 12px 14px;
+}
+.theme-input:focus,
+.team-name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* --- Suggesties --- */
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.suggestion {
+  background: #0c0c10;
+  border: 1px solid #2c2c38;
+  border-radius: 999px;
+  color: #b6b6bf;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.suggestion:hover {
+  border-color: var(--accent);
+}
+.suggestion.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c0c10;
+  font-weight: 500;
+}
+
+/* --- Moeilijkheid --- */
+.diff-row,
+.count-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.diff-btn {
+  flex: 1;
+  min-width: 96px;
+  background: #0c0c10;
+  border: 2px solid #2c2c38;
+  border-radius: 10px;
+  color: #b6b6bf;
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  padding: 12px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.diff-btn:hover {
+  border-color: var(--diff);
+}
+.diff-btn.active {
+  border-color: var(--diff);
+  color: var(--diff);
+  background: color-mix(in srgb, var(--diff) 14%, #0c0c10);
+}
+
+/* --- Aantal teams --- */
+.count-btn {
+  width: 52px;
+  height: 52px;
+  background: #0c0c10;
+  border: 2px solid #2c2c38;
+  border-radius: 10px;
+  color: #b6b6bf;
+  font-family: var(--font-display);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.count-btn:hover {
+  border-color: var(--accent);
+}
+.count-btn.active {
+  border-color: var(--accent);
+  color: #0c0c10;
+  background: var(--accent);
+}
+
+/* --- Teamnamen --- */
+.team-names {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.team-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.team-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* --- Winconditie slider --- */
+.win-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #2c2c38;
+  cursor: pointer;
+}
+.win-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #0c0c10;
+}
+.win-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #0c0c10;
+}
+
+/* --- Start-knop --- */
+.start-btn {
+  margin-top: 20px;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  color: #0c0c10;
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 3px;
+  padding: 16px;
+  cursor: pointer;
+  animation: glow 2.2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.start-btn:hover {
+  filter: brightness(1.08);
+}
+.start-btn.loading {
+  cursor: progress;
+  animation: none;
+  filter: brightness(0.92);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(12, 12, 16, 0.3);
+  border-top-color: #0c0c10;
+  border-radius: 50%;
+  animation: spinner 0.7s linear infinite;
+}
+
+/* --- Foutmelding --- */
+.error-box {
+  margin-top: 14px;
+  background: color-mix(in srgb, var(--diff-red) 16%, #0c0c10);
+  border: 1px solid var(--diff-red);
+  border-radius: 10px;
+  color: var(--diff-red);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 12px 14px;
+  white-space: pre-wrap;
 }
