@@ -8,29 +8,61 @@
    ============================================================ */
 const AudioEngine = (() => {
   let ytPlayer = null;
-  let ytReady = false;
+  let ytApiReady = false; // IFrame API-script geladen
+  let ytPlayerReady = false; // player-instance klaar voor gebruik
   let started = false;
   let timeoutId = null;
   let token = 0; // invalideert verouderde afspeel-acties
   let statusCb = () => {};
+  let currentSong = null;
+  let ytApiRequested = false;
 
   const audioEl = document.getElementById('fallback-audio');
 
   // Wordt globaal aangeroepen zodra de YouTube IFrame API geladen is.
+  // De player zelf (en dus het iframe) wordt pas bij de eerste play()
+  // aangemaakt, zodat de overige schermen geen iframe bevatten.
   window.onYouTubeIframeAPIReady = () => {
+    ytApiReady = true;
+    if (currentSong && !started) createPlayer();
+  };
+
+  // Laadt de IFrame API pas wanneer er voor het eerst muziek speelt.
+  function ensureYtApi() {
+    if (ytApiRequested) return;
+    ytApiRequested = true;
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(script);
+  }
+
+  function createPlayer() {
+    if (ytPlayer || !ytApiReady) return;
     ytPlayer = new YT.Player('yt-player', {
       height: '180',
       width: '320',
       playerVars: { enablejsapi: 1, controls: 0, disablekb: 1, playsinline: 1 },
       events: {
         onReady: () => {
-          ytReady = true;
+          ytPlayerReady = true;
+          if (currentSong && !started) startYt(currentSong, token);
         },
         onStateChange: onYtStateChange,
         onError: onYtError,
       },
     });
-  };
+  }
+
+  function startYt(song, forToken) {
+    if (forToken !== token) return;
+    const query = song.artist + ' ' + song.title + ' official audio';
+    try {
+      ytPlayer.loadPlaylist({ listType: 'search', list: query });
+      ytPlayer.setVolume(100);
+    } catch (err) {
+      fallbackToItunes(song, forToken);
+    }
+  }
 
   function onYtStateChange(e) {
     if (e.data === YT.PlayerState.PLAYING) {
@@ -40,12 +72,10 @@ const AudioEngine = (() => {
     }
   }
 
-  function onYtError(e) {
+  function onYtError() {
     // 150 / 101 = embedding geblokkeerd; 100 / 2 / 5 = niet speelbaar.
     if (!started) fallbackToItunes(currentSong, token);
   }
-
-  let currentSong = null;
 
   function stopYt() {
     try {
@@ -108,23 +138,20 @@ const AudioEngine = (() => {
     stopAudio();
     stopYt();
 
-    const query = song.artist + ' ' + song.title + ' official audio';
+    // 5s zonder afspelen (incl. trage YT-init) -> automatische fallback.
+    timeoutId = setTimeout(() => {
+      if (!started && forToken === token) fallbackToItunes(song, forToken);
+    }, 5000);
 
-    if (ytReady && ytPlayer && ytPlayer.loadPlaylist) {
-      try {
-        ytPlayer.loadPlaylist({ listType: 'search', list: query });
-        ytPlayer.setVolume(100);
-      } catch (err) {
-        fallbackToItunes(song, forToken);
-        return;
-      }
-      // 5s zonder afspelen -> automatische fallback.
-      timeoutId = setTimeout(() => {
-        if (!started && forToken === token) fallbackToItunes(song, forToken);
-      }, 5000);
+    if (ytPlayer && ytPlayerReady) {
+      startYt(song, forToken);
+    } else if (ytApiReady) {
+      // Maakt het iframe aan; onReady start daarna het afspelen.
+      createPlayer();
     } else {
-      // YouTube API niet beschikbaar -> direct iTunes.
-      fallbackToItunes(song, forToken);
+      // IFrame API nog niet geladen — laad hem; onYouTubeIframeAPIReady
+      // pikt de wachtende song op zodra het script binnen is.
+      ensureYtApi();
     }
   }
 
@@ -132,6 +159,7 @@ const AudioEngine = (() => {
   function stop() {
     token += 1;
     started = false;
+    currentSong = null;
     clearTimeout(timeoutId);
     stopYt();
     stopAudio();
@@ -434,10 +462,234 @@ function initTeams() {
   }
 }
 
-/* renderGame / renderWin — geïmplementeerd in Feature 4 & 5 */
+/* ============================================================
+   Feature 4 — Spelscherm
+   ============================================================ */
+
+// Per equalizer-bar een eigen keyframe met willekeurige hoogtes,
+// duration en delay (eenmalig geïnjecteerd).
+const EQ_BARS = (() => {
+  const bars = [];
+  let css = '';
+  for (let i = 0; i < 8; i++) {
+    const minH = 6 + Math.floor(Math.random() * 8);
+    const maxH = 42 + Math.floor(Math.random() * 19);
+    const dur = (0.65 + Math.random() * 0.35).toFixed(2);
+    const delay = (Math.random() * 0.7).toFixed(2);
+    css += `@keyframes eqbar${i}{0%,100%{height:${minH}px}50%{height:${maxH}px}}`;
+    bars.push({ name: `eqbar${i}`, dur, delay });
+  }
+  const styleEl = document.createElement('style');
+  styleEl.textContent = css;
+  document.head.appendChild(styleEl);
+  return bars;
+})();
+
+function currentSong() {
+  return state.songs[state.songIndex] || null;
+}
+
+function buildHeader() {
+  const remaining = state.songs.length - state.songIndex;
+  const diff = DIFFICULTIES.find((d) => d.id === state.difficulty);
+  return h('header', { class: 'game-header' }, [
+    h('div', { class: 'logo', text: 'HITSTER' }),
+    h('div', { class: 'game-meta' }, [
+      h('span', { class: 'meta-theme', text: state.theme.trim() }),
+      h('span', { class: 'meta-sep', text: ' · ' }),
+      h('span', { class: 'meta-diff', text: diff ? diff.label : state.difficulty }),
+    ]),
+    h('div', { class: 'remaining', text: `${remaining} over` }),
+  ]);
+}
+
+function buildEqualizer() {
+  const eq = h('div', { class: 'equalizer' });
+  EQ_BARS.forEach((b) => {
+    const bar = h('div', { class: 'eq-bar' });
+    bar.style.animation = `${b.name} ${b.dur}s ease-in-out infinite`;
+    bar.style.animationDelay = `-${b.delay}s`;
+    eq.appendChild(bar);
+  });
+  return eq;
+}
+
+function buildCard() {
+  const song = currentSong();
+
+  if (state.cardState === 'idle') {
+    return h('div', { class: 'card card-idle fadeup' }, [
+      h('div', { class: 'vinyl' }, [h('div', { class: 'vinyl-label' })]),
+      h('p', { class: 'card-text', text: 'KLAAR VOOR HET VOLGENDE NUMMER?' }),
+      h('button', {
+        class: 'play-btn',
+        type: 'button',
+        text: '▶ SPEEL',
+        onclick: playSong,
+      }),
+    ]);
+  }
+
+  if (state.cardState === 'playing') {
+    return h('div', { class: 'card card-playing fadeup' }, [
+      buildEqualizer(),
+      h('p', { class: 'card-text', text: '♪ NU SPELEND...' }),
+      h('button', {
+        class: 'reveal-btn',
+        type: 'button',
+        text: 'ONTHUL ANTWOORD',
+        onclick: revealAnswer,
+      }),
+      h('p', { class: 'nopreview-msg', id: 'nopreview-msg', text: 'geen preview beschikbaar' }),
+    ]);
+  }
+
+  // revealed
+  const teamPick = h('div', { class: 'team-pick' });
+  state.teams.forEach((team, i) => {
+    const btn = h('button', {
+      class: 'pick-btn',
+      type: 'button',
+      text: team.name,
+      onclick: () => assignCard(i),
+    });
+    btn.style.setProperty('--tc', team.color);
+    teamPick.appendChild(btn);
+  });
+
+  return h('div', { class: 'card card-revealed fadeup' }, [
+    h('div', { class: 'reveal-year', text: String(song.year) }),
+    h('div', { class: 'reveal-artist', text: song.artist }),
+    h('div', { class: 'reveal-title', text: song.title }),
+    h('div', { class: 'divider' }),
+    h('p', { class: 'card-text', text: 'WIE KRIJGT DIT KAARTJE?' }),
+    teamPick,
+    h('button', {
+      class: 'discard-btn',
+      type: 'button',
+      text: 'NIEMAND — WEG',
+      onclick: () => assignCard(null),
+    }),
+  ]);
+}
+
+function buildTeamOverview() {
+  const wrap = h('div', { class: 'team-overview' });
+  state.teams.forEach((team) => {
+    const sorted = team.cards.slice().sort((a, b) => a.year - b.year);
+    const pct = Math.min(100, (team.cards.length / state.winCondition) * 100);
+
+    const dot = h('span', { class: 'team-dot' });
+    dot.style.background = team.color;
+
+    const fill = h('div', { class: 'progress-fill' });
+    fill.style.width = pct + '%';
+    fill.style.background = team.color;
+
+    const chips = h('div', { class: 'chips' });
+    sorted.forEach((card) => {
+      const chip = h('span', { class: 'chip', text: String(card.year) });
+      chip.style.borderColor = team.color;
+      chip.style.color = team.color;
+      chips.appendChild(chip);
+    });
+
+    const strip = h('div', { class: 'team-strip' }, [
+      h('div', { class: 'team-strip-head' }, [
+        dot,
+        h('span', { class: 'team-strip-name', text: team.name }),
+        h('span', {
+          class: 'team-strip-count',
+          text: `${team.cards.length} / ${state.winCondition}`,
+        }),
+      ]),
+      h('div', { class: 'progress' }, [fill]),
+      chips,
+    ]);
+    wrap.appendChild(strip);
+  });
+  return wrap;
+}
+
 function renderGame() {
   clearApp();
-  appRoot.appendChild(h('p', { text: 'Spelscherm volgt in Feature 4.' }));
+
+  // Geen nummers meer over — speelbare ronde voorbij.
+  if (state.songIndex >= state.songs.length) {
+    appRoot.appendChild(
+      h('div', { class: 'game-screen' }, [
+        buildHeader(),
+        h('div', { class: 'card-area' }, [
+          h('div', { class: 'card card-idle' }, [
+            h('p', { class: 'card-text', text: 'ALLE NUMMERS GESPEELD' }),
+            h('p', { class: 'subtle', text: 'Geen kaartjes meer om te verdelen.' }),
+            h('button', {
+              class: 'play-btn',
+              type: 'button',
+              text: 'NIEUW SPEL',
+              onclick: renderSetup,
+            }),
+          ]),
+        ]),
+        buildTeamOverview(),
+      ])
+    );
+    return;
+  }
+
+  appRoot.appendChild(
+    h('div', { class: 'game-screen' }, [
+      buildHeader(),
+      h('div', { class: 'card-area' }, [buildCard()]),
+      buildTeamOverview(),
+    ])
+  );
+}
+
+function playSong() {
+  const song = currentSong();
+  if (!song) return;
+  state.cardState = 'playing';
+  renderGame();
+
+  // Aangeroepen binnen de click-gesture zodat autoplay is toegestaan.
+  AudioEngine.play(song, (status) => {
+    if (status === 'nopreview') {
+      const msg = document.getElementById('nopreview-msg');
+      if (msg) msg.classList.add('visible');
+    }
+  });
+}
+
+function revealAnswer() {
+  AudioEngine.stop();
+  state.cardState = 'revealed';
+  renderGame();
+}
+
+function assignCard(teamIndex) {
+  const song = currentSong();
+  if (!song) return;
+
+  if (teamIndex != null) {
+    const team = state.teams[teamIndex];
+    team.cards.push({ year: song.year, artist: song.artist, title: song.title });
+    if (team.cards.length >= state.winCondition) {
+      state.songIndex += 1;
+      renderWin(team);
+      return;
+    }
+  }
+
+  state.songIndex += 1;
+  state.cardState = 'idle';
+  renderGame();
+}
+
+/* renderWin — geïmplementeerd in Feature 5 */
+function renderWin(team) {
+  clearApp();
+  appRoot.appendChild(h('p', { text: `${team.name} wint! Win-scherm volgt in Feature 5.` }));
 }
 
 document.addEventListener('DOMContentLoaded', renderSetup);

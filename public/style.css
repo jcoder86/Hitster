@@ -112,16 +112,7 @@ body {
   }
 }
 
-/* Equalizer-bars — per bar overschreven met eigen hoogte/timing */
-@keyframes eq {
-  0%,
-  100% {
-    height: 6px;
-  }
-  50% {
-    height: 60px;
-  }
-}
+/* Equalizer-bars — keyframes per bar dynamisch gegenereerd in app.js */
 
 @keyframes spinner {
   to {
@@ -216,7 +207,8 @@ body {
   font-size: 12px;
   padding: 6px 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
 }
 .suggestion:hover {
   border-color: var(--accent);
@@ -247,7 +239,8 @@ body {
   letter-spacing: 1.5px;
   padding: 12px 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
 }
 .diff-btn:hover {
   border-color: var(--diff);
@@ -269,7 +262,8 @@ body {
   font-family: var(--font-display);
   font-size: 24px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
 }
 .count-btn:hover {
   border-color: var(--accent);
@@ -373,3 +367,300 @@ body {
   padding: 12px 14px;
   white-space: pre-wrap;
 }
+
+/* ============================================================
+   Feature 4 — Spelscherm
+   ============================================================ */
+.game-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* --- Header --- */
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 26px;
+  border-bottom: 1px solid #24242e;
+}
+.game-header .logo {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  flex: 1;
+}
+.game-meta {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 1.5px;
+}
+.meta-theme {
+  color: var(--text);
+}
+.meta-sep {
+  color: #4d4d57;
+}
+.meta-diff {
+  color: #8a8a93;
+}
+.remaining {
+  flex: 1;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #8a8a93;
+}
+
+/* --- Kaartgebied --- */
+.card-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card);
+  border: 1px solid #24242e;
+  border-radius: 20px;
+  padding: 44px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+}
+.fadeup {
+  animation: fadeUp 0.35s ease-out;
+}
+
+.card-text {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: #c9c9d1;
+}
+.subtle {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #8a8a93;
+}
+
+/* --- Vinyl (idle) --- */
+.vinyl {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, #1c1c26 0 18%, transparent 18%),
+    repeating-radial-gradient(circle at center, #15151c 0 3px, #0a0a0e 3px 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 2.4s linear infinite;
+  box-shadow: 0 0 0 6px #0a0a0e, 0 14px 34px rgba(0, 0, 0, 0.6);
+}
+.vinyl-label {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px #0a0a0e;
+}
+
+/* --- SPEEL-knop --- */
+.play-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  color: #0c0c10;
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 3px;
+  padding: 14px 44px;
+  cursor: pointer;
+  animation: softPulse 1.8s ease-in-out infinite;
+}
+.play-btn:hover {
+  filter: brightness(1.08);
+}
+
+/* --- Equalizer (playing) --- */
+.equalizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 64px;
+}
+.eq-bar {
+  width: 12px;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+.reveal-btn {
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 2px;
+  padding: 12px 36px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
+}
+.reveal-btn:hover {
+  background: var(--accent);
+  color: #0c0c10;
+}
+
+.nopreview-msg {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #6f6f78;
+  visibility: hidden;
+}
+.nopreview-msg.visible {
+  visibility: visible;
+}
+
+/* --- Onthuld antwoord --- */
+.reveal-year {
+  font-family: var(--font-display);
+  font-size: 90px;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 24px rgba(245, 230, 66, 0.55);
+}
+.reveal-artist {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  color: #9a9aa4;
+}
+.reveal-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--text);
+}
+.divider {
+  width: 70%;
+  height: 1px;
+  background: #2c2c38;
+}
+
+.team-pick {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.pick-btn {
+  background: transparent;
+  border: 2px solid var(--tc);
+  border-radius: 10px;
+  color: var(--tc);
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
+}
+.pick-btn:hover {
+  background: var(--tc);
+  color: #0c0c10;
+}
+
+.discard-btn {
+  background: transparent;
+  border: 1px solid #3a3a46;
+  border-radius: 8px;
+  color: #6f6f78;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.discard-btn:hover {
+  color: #b6b6bf;
+  border-color: #6f6f78;
+}
+
+/* --- Teamoverzicht --- */
+.team-overview {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px 24px;
+  border-top: 1px solid #24242e;
+  overflow-x: auto;
+}
+.team-strip {
+  flex: 1;
+  min-width: 180px;
+  background: var(--card);
+  border: 1px solid #24242e;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.team-strip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.team-strip-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 1px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-strip-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #8a8a93;
+}
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: #24242e;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.chip {
+  border: 1px solid;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 7px;
+}
+
