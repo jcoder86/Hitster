@@ -8,6 +8,11 @@ const Anthropic = require('@anthropic-ai/sdk');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Eén reverse proxy (nginx/Caddy/Traefik) staat voor de app, dus
+// vertrouw één hop X-Forwarded-For. Nodig zodat de rate limiter het
+// echte client-IP ziet i.p.v. dat van de proxy.
+app.set('trust proxy', 1);
+
 // --- Misbruikbeperking ---------------------------------------
 const MAX_THEME_LENGTH = 120; // een echt muziekthema is kort
 const MAX_FIELD_LENGTH = 120; // max lengte van artist/title in de output
