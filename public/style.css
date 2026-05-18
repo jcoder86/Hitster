@@ -664,3 +664,97 @@ body {
   padding: 3px 7px;
 }
 
+/* ============================================================
+   Feature 5 — Win scherm
+   ============================================================ */
+@keyframes winGlow {
+  0%,
+  100% {
+    text-shadow: 0 0 18px var(--glow-color);
+  }
+  50% {
+    text-shadow: 0 0 52px var(--glow-color);
+  }
+}
+
+.win-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 56px 20px;
+  gap: 8px;
+}
+
+.win-eyebrow {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 6px;
+  color: #8a8a93;
+}
+
+.win-name {
+  font-family: var(--font-display);
+  font-size: clamp(64px, 16vw, 100px);
+  line-height: 1;
+  letter-spacing: 4px;
+  animation: winGlow 2.4s ease-in-out infinite;
+}
+
+.win-subtitle {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: #b6b6bf;
+  margin-bottom: 22px;
+}
+
+.win-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 32px;
+}
+.win-card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  justify-content: center;
+  border: 1px solid #24242e;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: var(--card);
+}
+.win-card-year {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+}
+.win-card-sep {
+  opacity: 0.5;
+}
+.win-card-artist {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+}
+
+.restart-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  color: #0c0c10;
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 4px;
+  padding: 14px 56px;
+  cursor: pointer;
+  animation: glow 2.2s ease-in-out infinite;
+}
+.restart-btn:hover {
+  filter: brightness(1.08);
+}
+

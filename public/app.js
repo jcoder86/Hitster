@@ -686,10 +686,48 @@ function assignCard(teamIndex) {
   renderGame();
 }
 
-/* renderWin — geïmplementeerd in Feature 5 */
+/* ============================================================
+   Feature 5 — Win scherm
+   ============================================================ */
 function renderWin(team) {
+  AudioEngine.stop();
   clearApp();
-  appRoot.appendChild(h('p', { text: `${team.name} wint! Win-scherm volgt in Feature 5.` }));
+
+  const winName = h('h1', { class: 'win-name', text: team.name });
+  winName.style.color = team.color;
+  winName.style.setProperty('--glow-color', team.color);
+
+  const timeline = h('div', { class: 'win-timeline' });
+  team.cards
+    .slice()
+    .sort((a, b) => a.year - b.year)
+    .forEach((card) => {
+      const row = h('div', { class: 'win-card-row' }, [
+        h('span', { class: 'win-card-year', text: String(card.year) }),
+        h('span', { class: 'win-card-sep', text: '·' }),
+        h('span', { class: 'win-card-artist', text: card.artist }),
+      ]);
+      row.style.color = team.color;
+      timeline.appendChild(row);
+    });
+
+  const screen = h('div', { class: 'win-screen' }, [
+    h('p', { class: 'win-eyebrow', text: 'WINNAAR' }),
+    winName,
+    h('p', {
+      class: 'win-subtitle',
+      text: `met ${team.cards.length} ${team.cards.length === 1 ? 'kaartje' : 'kaartjes'}`,
+    }),
+    timeline,
+    h('button', {
+      class: 'restart-btn',
+      type: 'button',
+      text: 'OPNIEUW',
+      onclick: renderSetup,
+    }),
+  ]);
+
+  appRoot.appendChild(screen);
 }
 
 document.addEventListener('DOMContentLoaded', renderSetup);
