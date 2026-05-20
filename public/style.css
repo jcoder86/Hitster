@@ -113,7 +113,7 @@ body {
 
 .brand-logo {
   display: block;
-  height: clamp(72px, 14vw, 140px);
+  height: clamp(144px, 28vw, 280px);
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -163,8 +163,14 @@ body {
   border-radius: 10px;
   color: var(--text);
   font-family: var(--font-serif);
+  font-weight: 400;
   font-size: 16px;
   padding: 12px 14px;
+}
+.theme-input::placeholder,
+.team-name-input::placeholder {
+  color: #6f6f78;
+  font-weight: 400;
 }
 .theme-input:focus,
 .team-name-input:focus {
