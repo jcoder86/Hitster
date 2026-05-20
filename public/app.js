@@ -606,7 +606,6 @@ function renderSetup() {
 
   const screen = h('div', { class: 'setup-screen' }, [
     h('img', { src: 'logo.png', alt: 'HITSTER', class: 'brand-logo' }),
-    h('p', { class: 'tagline', text: 'De muziekquiz — raad het jaar, win de kaartjes' }),
 
     h('div', { class: 'panel' }, [
       h('label', { class: 'field-label', text: 'THEMA' }),

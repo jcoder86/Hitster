@@ -116,15 +116,8 @@ body {
   height: clamp(72px, 14vw, 150px);
   width: auto;
   max-width: 100%;
+  margin-bottom: 24px;
   object-fit: contain;
-}
-
-.tagline {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: #8a8a93;
-  margin: 14px 0 22px;
-  text-align: center;
 }
 
 .panel {
