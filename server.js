@@ -31,6 +31,15 @@ const generateLimiter = rateLimit({
   message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' },
 });
 
+// Royaler voor preview-zoekacties: één spel = ~20 lookups.
+const previewLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Te veel preview-aanvragen.' },
+});
+
 // Dagelijkse teller (in memory) als laatste vangnet tegen kosten.
 const dailyUsage = { day: '', count: 0 };
 function withinDailyQuota() {
@@ -201,6 +210,48 @@ app.post('/api/generate-songs', generateLimiter, async (req, res) => {
     console.error('generate-songs fout:', err);
     res.status(500).json({ error: err.message || 'Onbekende serverfout.' });
   }
+});
+
+// Zoekt een 30-seconden preview-MP3 — eerst bij iTunes, dan bij Deezer.
+// Server-side om CORS-problemen op de client te vermijden.
+app.get('/api/preview', previewLimiter, async (req, res) => {
+  const { artist, title } = req.query;
+  if (
+    !artist ||
+    !title ||
+    typeof artist !== 'string' ||
+    typeof title !== 'string'
+  ) {
+    return res.status(400).json({ error: 'artist en title vereist' });
+  }
+  const a = artist.trim().slice(0, 100);
+  const t = title.trim().slice(0, 100);
+  if (!a || !t) {
+    return res.status(400).json({ error: 'artist of title is leeg' });
+  }
+  const q = encodeURIComponent(`${a} ${t}`);
+
+  try {
+    const r = await fetch(
+      `https://itunes.apple.com/search?term=${q}&entity=song&limit=3`
+    );
+    if (r.ok) {
+      const data = await r.json();
+      const hit = (data.results || []).find((x) => x.previewUrl);
+      if (hit) return res.json({ previewUrl: hit.previewUrl, source: 'itunes' });
+    }
+  } catch (_) {}
+
+  try {
+    const r = await fetch(`https://api.deezer.com/search?q=${q}&limit=5`);
+    if (r.ok) {
+      const data = await r.json();
+      const hit = (data.data || []).find((x) => x.preview);
+      if (hit) return res.json({ previewUrl: hit.preview, source: 'deezer' });
+    }
+  } catch (_) {}
+
+  return res.json({ previewUrl: null });
 });
 
 app.listen(PORT, () => {

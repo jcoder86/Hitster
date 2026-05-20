@@ -13,16 +13,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Verborgen audio-infrastructuur (Feature 2) -->
-  <div id="yt-host" aria-hidden="true">
-    <div id="yt-player"></div>
-    <div id="yt-cover"></div>
-  </div>
+  <!-- Verborgen audio-element voor preview-MP3's -->
   <audio id="fallback-audio" aria-hidden="true"></audio>
 
   <main id="app"><!-- schermen worden door app.js gerenderd --></main>
 
-  <!-- De YouTube IFrame API wordt lazy geladen door app.js bij de eerste play() -->
   <script src="app.js"></script>
 </body>
 </html>
