@@ -85,7 +85,7 @@ const DIFFICULTIES = [
   { id: 'moeilijk', label: 'MOEILIJK', color: '#ef476f' },
 ];
 
-const SUGGESTIONS = ['90s Hip-Hop', 'Nederhop', 'Top2000'];
+const SUGGESTIONS = ['90s Hip-Hop', 'Nederhop', 'Top2000', 'Metal'];
 
 const state = {
   theme: '',
@@ -486,7 +486,7 @@ function renderSetup() {
   const themeInput = h('input', {
     type: 'text',
     class: 'theme-input',
-    placeholder: 'bijv. Disco classics, Nederpop, Eurovisie…',
+    placeholder: 'Rap, Metal, EDM, Hitzone...',
     value: state.theme,
   });
 
@@ -605,7 +605,7 @@ function renderSetup() {
   });
 
   const screen = h('div', { class: 'setup-screen' }, [
-    h('h1', { class: 'brand', text: 'HITSTER' }),
+    h('img', { src: 'logo.png', alt: 'HITSTER', class: 'brand-logo' }),
     h('p', { class: 'tagline', text: 'De muziekquiz — raad het jaar, win de kaartjes' }),
 
     h('div', { class: 'panel' }, [
@@ -745,7 +745,9 @@ function buildHeader() {
   const remaining = state.songs.length - state.songIndex;
   const diff = DIFFICULTIES.find((d) => d.id === state.difficulty);
   return h('header', { class: 'game-header' }, [
-    h('div', { class: 'logo', text: 'HITSTER' }),
+    h('div', { class: 'logo' }, [
+      h('img', { src: 'logo.png', alt: 'HITSTER', class: 'logo-img' }),
+    ]),
     h('div', { class: 'game-meta' }, [
       h('span', { class: 'meta-theme', text: state.theme.trim() }),
       h('span', { class: 'meta-sep', text: ' · ' }),

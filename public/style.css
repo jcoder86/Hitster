@@ -111,12 +111,12 @@ body {
   padding: 48px 20px 64px;
 }
 
-.brand {
-  font-family: var(--font-display);
-  font-size: clamp(64px, 12vw, 120px);
-  letter-spacing: 6px;
-  color: var(--accent);
-  line-height: 0.9;
+.brand-logo {
+  display: block;
+  height: clamp(72px, 14vw, 140px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .tagline {
@@ -428,11 +428,14 @@ body {
   border-bottom: 1px solid #24242e;
 }
 .game-header .logo {
-  font-family: var(--font-display);
-  font-size: 34px;
-  letter-spacing: 3px;
-  color: var(--accent);
   flex: 1;
+  display: flex;
+  align-items: center;
+}
+.game-header .logo-img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
 }
 .game-meta {
   flex: 1;

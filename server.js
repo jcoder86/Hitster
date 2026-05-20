@@ -105,6 +105,7 @@ Rules:
 - No duplicates
 - Strictly follow the difficulty level
 - Only real, existing songs
+- Prefer tracks with wide international distribution on Apple Music/iTunes and Deezer. Avoid Spotify-exclusive releases, label-exclusive singles, regional-only releases, and underground / local-label material that typically isn't carried on global stores. When the theme is Dutch-language, still prefer Dutch artists whose catalogue is on Apple Music (e.g. Marco Borsato, Doe Maar, BLØF, Nielson, Suzan & Freek, De Dijk) over more obscure regional acts.
 `;
 }
 
