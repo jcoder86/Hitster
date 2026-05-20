@@ -423,62 +423,56 @@ function spotifyLogout() {
   renderSetup();
 }
 
-// Bouwt het Spotify-blok bovenaan het setup-paneel (of niets).
-function buildSpotifySection() {
+// Compact Spotify-blok in de rechterbovenhoek van het setup-scherm.
+function buildSpotifyCorner() {
   if (!state.spotifyConfig.enabled) return null;
 
+  const logo = h('img', {
+    src: 'spotify.png',
+    alt: 'Spotify',
+    class: 'spotify-corner-logo',
+  });
+
+  // Niet ingelogd — hele widget is klikbaar -> OAuth.
   if (!state.spotify.connected) {
-    return h('div', { class: 'spotify-section' }, [
-      h('button', {
-        type: 'button',
-        class: 'spotify-btn',
-        text: 'LOGIN MET SPOTIFY',
+    return h(
+      'div',
+      {
+        class: 'spotify-corner spotify-corner-clickable',
+        role: 'button',
+        tabindex: '0',
         onclick: () => SpotifyAuth.login(state.spotifyConfig.clientId),
-      }),
-      h('p', {
-        class: 'spotify-hint',
-        text:
-          'Optioneel — Premium-account vereist. Speelt nummers volledig vanaf seconde 0.',
-      }),
-    ]);
+      },
+      [logo, h('span', { class: 'spotify-corner-label', text: 'LOGIN' })]
+    );
   }
 
+  const logoutBtn = h('button', {
+    type: 'button',
+    class: 'spotify-corner-logout',
+    text: 'uitloggen',
+    onclick: (e) => {
+      e.stopPropagation();
+      spotifyLogout();
+    },
+  });
+
+  // Ingelogd zonder Premium.
   if (!state.spotify.isPremium) {
-    return h('div', { class: 'spotify-section spotify-warning' }, [
-      h('p', {
-        class: 'spotify-warn-text',
-        text: 'Spotify Premium vereist om vanaf 0 af te spelen.',
-      }),
-      h('button', {
-        type: 'button',
-        class: 'spotify-logout',
-        text: 'Uitloggen',
-        onclick: spotifyLogout,
-      }),
+    return h('div', { class: 'spotify-corner spotify-corner-warn' }, [
+      logo,
+      h('span', { class: 'spotify-corner-label', text: 'PREMIUM VEREIST' }),
+      logoutBtn,
     ]);
   }
 
-  return h('div', { class: 'spotify-section spotify-connected' }, [
-    h('div', { class: 'spotify-status' }, [
-      h('span', { class: 'spotify-dot' }),
-      h('span', {
-        text:
-          'Ingelogd via Spotify' +
-          (state.spotify.profile && state.spotify.profile.display_name
-            ? ': ' + state.spotify.profile.display_name
-            : ''),
-      }),
-    ]),
-    h('p', {
-      class: 'spotify-hint',
-      text: 'Nummers worden uit Spotify gehaald en vanaf seconde 0 afgespeeld.',
-    }),
-    h('button', {
-      type: 'button',
-      class: 'spotify-logout',
-      text: 'Uitloggen',
-      onclick: spotifyLogout,
-    }),
+  // Ingelogd én Premium.
+  const name =
+    (state.spotify.profile && state.spotify.profile.display_name) || 'INGELOGD';
+  return h('div', { class: 'spotify-corner spotify-corner-connected' }, [
+    logo,
+    h('span', { class: 'spotify-corner-label', text: name.toUpperCase() }),
+    logoutBtn,
   ]);
 }
 
@@ -615,7 +609,6 @@ function renderSetup() {
     h('p', { class: 'tagline', text: 'De muziekquiz — raad het jaar, win de kaartjes' }),
 
     h('div', { class: 'panel' }, [
-      buildSpotifySection(),
       h('label', { class: 'field-label', text: 'THEMA' }),
       themeInput,
       suggestionRow,
@@ -642,6 +635,8 @@ function renderSetup() {
   ]);
 
   appRoot.appendChild(screen);
+  const corner = buildSpotifyCorner();
+  if (corner) appRoot.appendChild(corner);
   refreshSuggestions();
   refreshDiff();
   refreshCount();

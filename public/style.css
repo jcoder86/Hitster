@@ -335,85 +335,63 @@ body {
   animation: spinner 0.7s linear infinite;
 }
 
-/* --- Spotify-blok --- */
-.spotify-section {
+/* --- Spotify corner-widget (rechtsboven) --- */
+.spotify-corner {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  background: #0c0c10;
-  border: 1px solid #24242e;
-  border-radius: 10px;
-  margin-bottom: 6px;
-}
-
-.spotify-btn {
-  background: #1db954;
-  border: none;
-  border-radius: 10px;
-  color: #0c0c10;
-  font-family: var(--font-display);
-  font-size: 20px;
-  letter-spacing: 2px;
-  padding: 12px;
-  cursor: pointer;
-  transition: filter 0.15s ease;
-}
-.spotify-btn:hover {
-  filter: brightness(1.08);
-}
-
-.spotify-hint {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #8a8a93;
-  line-height: 1.4;
-}
-
-.spotify-status {
-  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  user-select: none;
+}
+
+.spotify-corner-clickable {
+  cursor: pointer;
+}
+
+.spotify-corner-logo {
+  width: 44px;
+  height: 44px;
+  display: block;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.spotify-corner-clickable:hover .spotify-corner-logo {
+  filter: brightness(1.15);
+  transform: scale(1.05);
+}
+
+.spotify-corner-label {
   font-family: var(--font-display);
-  font-size: 18px;
-  letter-spacing: 1px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--text);
+  line-height: 1;
+}
+.spotify-corner-clickable:hover .spotify-corner-label {
   color: #1db954;
 }
-
-.spotify-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #1db954;
-  box-shadow: 0 0 10px #1db954;
+.spotify-corner-connected .spotify-corner-label {
+  color: #1db954;
 }
-
-.spotify-connected {
-  border-color: color-mix(in srgb, #1db954 40%, #24242e);
-}
-
-.spotify-warning {
-  border-color: var(--diff-red);
-}
-.spotify-warn-text {
+.spotify-corner-warn .spotify-corner-label {
   color: var(--diff-red);
-  font-family: var(--font-mono);
-  font-size: 13px;
 }
 
-.spotify-logout {
-  align-self: flex-start;
+.spotify-corner-logout {
   background: transparent;
-  border: 1px solid #3a3a46;
-  border-radius: 8px;
-  color: #b6b6bf;
+  border: none;
+  color: #6f6f78;
   font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 6px 12px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-decoration: underline;
   cursor: pointer;
+  padding: 0;
 }
-.spotify-logout:hover {
-  border-color: #8a8a93;
+.spotify-corner-logout:hover {
   color: var(--text);
 }
 
