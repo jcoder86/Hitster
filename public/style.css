@@ -108,12 +108,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 20px 64px;
+  padding: 6px 20px 20px;
 }
 
 .brand-logo {
   display: block;
-  height: clamp(144px, 28vw, 280px);
+  height: clamp(72px, 14vw, 150px);
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -121,9 +121,9 @@ body {
 
 .tagline {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   color: #8a8a93;
-  margin: 6px 0 32px;
+  margin: 0 0 10px;
   text-align: center;
 }
 
@@ -133,10 +133,10 @@ body {
   background: var(--card);
   border: 1px solid #24242e;
   border-radius: 16px;
-  padding: 28px;
+  padding: 18px 22px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .field-label {
@@ -144,7 +144,7 @@ body {
   font-size: 18px;
   letter-spacing: 2px;
   color: #8a8a93;
-  margin-top: 14px;
+  margin-top: 8px;
 }
 .field-label:first-child {
   margin-top: 0;
@@ -307,7 +307,7 @@ body {
 
 /* --- Start-knop --- */
 .start-btn {
-  margin-top: 20px;
+  margin-top: 12px;
   background: var(--accent);
   border: none;
   border-radius: 12px;
