@@ -254,6 +254,14 @@ app.get('/api/preview', previewLimiter, async (req, res) => {
   return res.json({ previewUrl: null });
 });
 
+// Configuratie die de frontend nodig heeft (geen secrets).
+app.get('/api/config', (_req, res) => {
+  res.json({
+    spotifyClientId: process.env.SPOTIFY_CLIENT_ID || null,
+    spotifyEnabled: Boolean(process.env.SPOTIFY_CLIENT_ID),
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Hitster draait op http://localhost:${PORT}`);
 });

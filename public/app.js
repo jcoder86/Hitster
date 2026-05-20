@@ -97,6 +97,8 @@ const state = {
   songIndex: 0,
   cardState: 'idle',
   teams: [],
+  spotifyConfig: { enabled: false, clientId: null },
+  spotify: { connected: false, isPremium: false, profile: null },
 };
 
 const appRoot = document.getElementById('app');
@@ -137,10 +139,354 @@ function shuffle(arr) {
 }
 
 /* ============================================================
+   Spotify-integratie
+   ============================================================ */
+
+// OAuth via PKCE — geen client secret nodig, tokens in sessionStorage.
+const SpotifyAuth = (() => {
+  const K = {
+    access: 'sp_access_token',
+    refresh: 'sp_refresh_token',
+    expiresAt: 'sp_expires_at',
+    verifier: 'sp_verifier',
+  };
+
+  function randStr(len) {
+    const a = new Uint8Array(len);
+    crypto.getRandomValues(a);
+    return Array.from(a)
+      .map((b) => ('0' + b.toString(16)).slice(-2))
+      .join('')
+      .slice(0, len);
+  }
+  async function sha256(s) {
+    return await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  }
+  function b64url(buf) {
+    return btoa(String.fromCharCode(...new Uint8Array(buf)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+
+  function saveTokens(d) {
+    sessionStorage.setItem(K.access, d.access_token);
+    if (d.refresh_token) sessionStorage.setItem(K.refresh, d.refresh_token);
+    sessionStorage.setItem(K.expiresAt, String(Date.now() + d.expires_in * 1000));
+  }
+
+  function isLoggedIn() {
+    return !!sessionStorage.getItem(K.access);
+  }
+
+  function logout() {
+    Object.values(K).forEach((k) => sessionStorage.removeItem(k));
+  }
+
+  async function login(clientId) {
+    const verifier = randStr(64);
+    const challenge = b64url(await sha256(verifier));
+    sessionStorage.setItem(K.verifier, verifier);
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      scope: 'streaming user-read-email user-read-private',
+      redirect_uri: window.location.origin + '/',
+      code_challenge_method: 'S256',
+      code_challenge: challenge,
+    });
+    window.location.href = 'https://accounts.spotify.com/authorize?' + params;
+  }
+
+  async function handleCallback(clientId) {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return false;
+    const verifier = sessionStorage.getItem(K.verifier);
+    if (!verifier) return false;
+    try {
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: window.location.origin + '/',
+          client_id: clientId,
+          code_verifier: verifier,
+        }),
+      });
+      const data = await res.json();
+      history.replaceState(null, '', window.location.pathname);
+      if (data.access_token) {
+        saveTokens(data);
+        sessionStorage.removeItem(K.verifier);
+        return true;
+      }
+    } catch (e) {
+      console.error('Spotify callback fout:', e);
+    }
+    return false;
+  }
+
+  async function refresh(clientId) {
+    const rt = sessionStorage.getItem(K.refresh);
+    if (!rt) return null;
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: rt,
+        client_id: clientId,
+      }),
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      saveTokens(data);
+      return data.access_token;
+    }
+    return null;
+  }
+
+  async function getValidToken(clientId) {
+    const exp = parseInt(sessionStorage.getItem(K.expiresAt) || '0', 10);
+    if (Date.now() < exp - 60000) return sessionStorage.getItem(K.access);
+    return await refresh(clientId);
+  }
+
+  return { login, logout, isLoggedIn, handleCallback, getValidToken };
+})();
+
+// Eenvoudige wrapper rond de Spotify Web API met automatische token-refresh.
+async function spotifyApi(path, opts) {
+  const token = await SpotifyAuth.getValidToken(state.spotifyConfig.clientId);
+  if (!token) throw new Error('Spotify-sessie verlopen — log opnieuw in.');
+  const headers = Object.assign(
+    { Authorization: 'Bearer ' + token },
+    (opts && opts.headers) || {}
+  );
+  if (opts && opts.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const url = path.startsWith('http') ? path : 'https://api.spotify.com/v1' + path;
+  const res = await fetch(url, Object.assign({}, opts, { headers }));
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text().catch(() => '');
+    throw new Error('Spotify ' + res.status + ': ' + txt.slice(0, 140));
+  }
+  return res.status === 204 ? null : await res.json();
+}
+
+// Bouwt een lijst van 20 nummers uit Spotify Search, gefilterd op
+// popularity volgens de gekozen moeilijkheidsgraad.
+async function generateSpotifySongList(theme, difficulty) {
+  const q = encodeURIComponent(theme);
+  const data = await spotifyApi('/search?q=' + q + '&type=track&limit=50&market=NL');
+  let items = ((data && data.tracks && data.tracks.items) || []).filter(
+    (t) => t && t.id && t.album && t.album.release_date
+  );
+  const seen = new Set();
+  items = items.filter((t) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+  if (items.length < 20) {
+    throw new Error(
+      'Te weinig Spotify-resultaten voor dit thema. Probeer een breder thema.'
+    );
+  }
+  items.sort((a, b) => b.popularity - a.popularity);
+  let pool;
+  if (difficulty === 'makkelijk') pool = items.slice(0, 30);
+  else if (difficulty === 'moeilijk') pool = items.slice(-30);
+  else pool = items.slice(10, 40);
+  return shuffle(pool)
+    .slice(0, 20)
+    .map((t) => ({
+      artist: (t.artists[0] && t.artists[0].name) || 'Onbekend',
+      title: t.name,
+      year: parseInt(t.album.release_date.slice(0, 4), 10) || 0,
+      uri: t.uri,
+    }));
+}
+
+// Speelt volledige tracks via de Web Playback SDK.
+const SpotifyEngine = (() => {
+  let player = null;
+  let deviceId = null;
+  let sdkPromise = null;
+  let token = 0;
+  let statusCb = () => {};
+
+  function loadSdk() {
+    if (sdkPromise) return sdkPromise;
+    sdkPromise = new Promise((resolve) => {
+      window.onSpotifyWebPlaybackSDKReady = () => resolve();
+    });
+    const s = document.createElement('script');
+    s.src = 'https://sdk.scdn.co/spotify-player.js';
+    document.head.appendChild(s);
+    return sdkPromise;
+  }
+
+  async function ensurePlayer() {
+    if (player && deviceId) return;
+    await loadSdk();
+    player = new Spotify.Player({
+      name: 'Hitster',
+      getOAuthToken: (cb) =>
+        SpotifyAuth.getValidToken(state.spotifyConfig.clientId).then((t) => cb(t)),
+      volume: 0.8,
+    });
+    const ready = new Promise((resolve, reject) => {
+      player.addListener('ready', (e) => {
+        deviceId = e.device_id;
+        resolve();
+      });
+      player.addListener('initialization_error', (e) =>
+        reject(new Error('init: ' + e.message))
+      );
+      player.addListener('authentication_error', (e) =>
+        reject(new Error('auth: ' + e.message))
+      );
+      player.addListener('account_error', (e) =>
+        reject(new Error('account: ' + e.message))
+      );
+    });
+    const ok = await player.connect();
+    if (!ok) throw new Error('Spotify SDK kon niet verbinden.');
+    await ready;
+  }
+
+  async function play(song, onStatus) {
+    token += 1;
+    const forToken = token;
+    statusCb = typeof onStatus === 'function' ? onStatus : () => {};
+    try {
+      await ensurePlayer();
+      if (forToken !== token) return;
+      const access = await SpotifyAuth.getValidToken(state.spotifyConfig.clientId);
+      const res = await fetch(
+        'https://api.spotify.com/v1/me/player/play?device_id=' + deviceId,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: 'Bearer ' + access,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ uris: [song.uri], position_ms: 0 }),
+        }
+      );
+      if (forToken !== token) return;
+      if (!res.ok && res.status !== 204) {
+        const txt = await res.text().catch(() => '');
+        throw new Error('Spotify play ' + res.status + ': ' + txt.slice(0, 120));
+      }
+      statusCb('playing');
+    } catch (err) {
+      console.error('Spotify play fout:', err);
+      if (forToken === token) statusCb('nopreview');
+    }
+  }
+
+  async function stop() {
+    token += 1;
+    try {
+      if (player) await player.pause();
+    } catch (_) {}
+  }
+
+  return { play, stop };
+})();
+
+// Welke afspeel-engine te gebruiken op basis van Spotify-status.
+function isSpotifyMode() {
+  return state.spotify.connected && state.spotify.isPremium;
+}
+
+function audioPlay(song, cb) {
+  if (isSpotifyMode() && song.uri) return SpotifyEngine.play(song, cb);
+  return AudioEngine.play(song, cb);
+}
+
+function audioStop() {
+  AudioEngine.stop();
+  SpotifyEngine.stop();
+}
+
+// Reset Spotify-state en herrender setup.
+function spotifyLogout() {
+  SpotifyAuth.logout();
+  state.spotify = { connected: false, isPremium: false, profile: null };
+  renderSetup();
+}
+
+// Bouwt het Spotify-blok bovenaan het setup-paneel (of niets).
+function buildSpotifySection() {
+  if (!state.spotifyConfig.enabled) return null;
+
+  if (!state.spotify.connected) {
+    return h('div', { class: 'spotify-section' }, [
+      h('button', {
+        type: 'button',
+        class: 'spotify-btn',
+        text: 'LOGIN MET SPOTIFY',
+        onclick: () => SpotifyAuth.login(state.spotifyConfig.clientId),
+      }),
+      h('p', {
+        class: 'spotify-hint',
+        text:
+          'Optioneel — Premium-account vereist. Speelt nummers volledig vanaf seconde 0.',
+      }),
+    ]);
+  }
+
+  if (!state.spotify.isPremium) {
+    return h('div', { class: 'spotify-section spotify-warning' }, [
+      h('p', {
+        class: 'spotify-warn-text',
+        text: 'Spotify Premium vereist om vanaf 0 af te spelen.',
+      }),
+      h('button', {
+        type: 'button',
+        class: 'spotify-logout',
+        text: 'Uitloggen',
+        onclick: spotifyLogout,
+      }),
+    ]);
+  }
+
+  return h('div', { class: 'spotify-section spotify-connected' }, [
+    h('div', { class: 'spotify-status' }, [
+      h('span', { class: 'spotify-dot' }),
+      h('span', {
+        text:
+          'Ingelogd via Spotify' +
+          (state.spotify.profile && state.spotify.profile.display_name
+            ? ': ' + state.spotify.profile.display_name
+            : ''),
+      }),
+    ]),
+    h('p', {
+      class: 'spotify-hint',
+      text: 'Nummers worden uit Spotify gehaald en vanaf seconde 0 afgespeeld.',
+    }),
+    h('button', {
+      type: 'button',
+      class: 'spotify-logout',
+      text: 'Uitloggen',
+      onclick: spotifyLogout,
+    }),
+  ]);
+}
+
+/* ============================================================
    Feature 3 — Setup scherm
    ============================================================ */
 function renderSetup() {
-  AudioEngine.stop();
+  audioStop();
   clearApp();
 
   const themeInput = h('input', {
@@ -269,6 +615,7 @@ function renderSetup() {
     h('p', { class: 'tagline', text: 'De muziekquiz — raad het jaar, win de kaartjes' }),
 
     h('div', { class: 'panel' }, [
+      buildSpotifySection(),
       h('label', { class: 'field-label', text: 'THEMA' }),
       themeInput,
       suggestionRow,
@@ -314,6 +661,10 @@ async function startGame(startBtn, errorBox) {
     showError(errorBox, 'Vul eerst een thema in.');
     return;
   }
+  if (state.spotify.connected && !state.spotify.isPremium) {
+    showError(errorBox, 'Spotify Premium is vereist om vanaf 0 af te spelen.');
+    return;
+  }
   errorBox.style.display = 'none';
 
   const originalLabel = startBtn.textContent;
@@ -324,20 +675,27 @@ async function startGame(startBtn, errorBox) {
   startBtn.appendChild(h('span', { text: 'NUMMERS GENEREREN…' }));
 
   try {
-    const res = await fetch('/api/generate-songs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ theme, difficulty: state.difficulty }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Onbekende fout bij het genereren.');
-    }
-    if (!Array.isArray(data.songs) || data.songs.length === 0) {
-      throw new Error('Er zijn geen nummers ontvangen.');
+    let songs;
+    if (isSpotifyMode()) {
+      // Lijst komt rechtstreeks uit Spotify Search.
+      songs = await generateSpotifySongList(theme, state.difficulty);
+    } else {
+      const res = await fetch('/api/generate-songs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme, difficulty: state.difficulty }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Onbekende fout bij het genereren.');
+      }
+      if (!Array.isArray(data.songs) || data.songs.length === 0) {
+        throw new Error('Er zijn geen nummers ontvangen.');
+      }
+      songs = data.songs;
     }
 
-    state.songs = shuffle(data.songs);
+    state.songs = shuffle(songs);
     state.songIndex = 0;
     state.cardState = 'idle';
     initTeams();
@@ -552,7 +910,7 @@ function playSong() {
   renderGame();
 
   // Aangeroepen binnen de click-gesture zodat autoplay is toegestaan.
-  AudioEngine.play(song, (status) => {
+  audioPlay(song, (status) => {
     if (status === 'nopreview') {
       const msg = document.getElementById('nopreview-msg');
       if (msg) msg.classList.add('visible');
@@ -561,7 +919,7 @@ function playSong() {
 }
 
 function revealAnswer() {
-  AudioEngine.stop();
+  audioStop();
   state.cardState = 'revealed';
   renderGame();
 }
@@ -589,7 +947,7 @@ function assignCard(teamIndex) {
    Feature 5 — Win scherm
    ============================================================ */
 function renderWin(team) {
-  AudioEngine.stop();
+  audioStop();
   clearApp();
 
   const winName = h('h1', { class: 'win-name', text: team.name });
@@ -629,5 +987,45 @@ function renderWin(team) {
   appRoot.appendChild(screen);
 }
 
-document.addEventListener('DOMContentLoaded', renderSetup);
+/* ============================================================
+   Bootstrap
+   ============================================================ */
+async function bootstrap() {
+  // 1. Server-config (Spotify-client-ID indien geconfigureerd).
+  try {
+    const cfg = await fetch('/api/config').then((r) => r.json());
+    state.spotifyConfig = {
+      enabled: !!cfg.spotifyEnabled,
+      clientId: cfg.spotifyClientId || null,
+    };
+  } catch (_) {
+    // Zonder config draait alles gewoon op de preview-modus.
+  }
+
+  // 2. Spotify OAuth-callback (?code=...) afhandelen vóór het rendert.
+  if (
+    state.spotifyConfig.enabled &&
+    new URLSearchParams(window.location.search).has('code')
+  ) {
+    await SpotifyAuth.handleCallback(state.spotifyConfig.clientId);
+  }
+
+  // 3. Bestaande sessie? Haal profiel op om Premium-status te checken.
+  if (state.spotifyConfig.enabled && SpotifyAuth.isLoggedIn()) {
+    try {
+      const profile = await spotifyApi('/me');
+      state.spotify = {
+        connected: true,
+        isPremium: profile && profile.product === 'premium',
+        profile,
+      };
+    } catch (_) {
+      SpotifyAuth.logout();
+    }
+  }
+
+  renderSetup();
+}
+
+document.addEventListener('DOMContentLoaded', bootstrap);
 

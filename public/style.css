@@ -335,6 +335,88 @@ body {
   animation: spinner 0.7s linear infinite;
 }
 
+/* --- Spotify-blok --- */
+.spotify-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: #0c0c10;
+  border: 1px solid #24242e;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.spotify-btn {
+  background: #1db954;
+  border: none;
+  border-radius: 10px;
+  color: #0c0c10;
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 2px;
+  padding: 12px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.spotify-btn:hover {
+  filter: brightness(1.08);
+}
+
+.spotify-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8a8a93;
+  line-height: 1.4;
+}
+
+.spotify-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: #1db954;
+}
+
+.spotify-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1db954;
+  box-shadow: 0 0 10px #1db954;
+}
+
+.spotify-connected {
+  border-color: color-mix(in srgb, #1db954 40%, #24242e);
+}
+
+.spotify-warning {
+  border-color: var(--diff-red);
+}
+.spotify-warn-text {
+  color: var(--diff-red);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.spotify-logout {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid #3a3a46;
+  border-radius: 8px;
+  color: #b6b6bf;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.spotify-logout:hover {
+  border-color: #8a8a93;
+  color: var(--text);
+}
+
 /* --- Foutmelding --- */
 .error-box {
   margin-top: 14px;
