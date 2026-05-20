@@ -129,6 +129,15 @@ function clearApp() {
   appRoot.innerHTML = '';
 }
 
+// Hoeveelheid nummers per spel: winconditie × teams + 15% buffer
+// voor weggegooide kaartjes en niet-speelbare tracks.
+function songCount() {
+  return Math.max(
+    state.teamCount * state.winCondition,
+    Math.round(state.teamCount * state.winCondition * 1.15)
+  );
+}
+
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -278,32 +287,52 @@ async function spotifyApi(path, opts) {
   return res.status === 204 ? null : await res.json();
 }
 
-// Bouwt een lijst van 20 nummers uit Spotify Search, gefilterd op
-// popularity volgens de gekozen moeilijkheidsgraad.
-async function generateSpotifySongList(theme, difficulty) {
+// Bouwt een lijst van `count` nummers uit Spotify Search, gefilterd
+// op popularity volgens de gekozen moeilijkheidsgraad. Haalt zoveel
+// pagina's op als nodig (Spotify limiteert tot 50 per call).
+async function generateSpotifySongList(theme, difficulty, count) {
   const q = encodeURIComponent(theme);
-  const data = await spotifyApi('/search?q=' + q + '&type=track&limit=50&market=NL');
-  let items = ((data && data.tracks && data.tracks.items) || []).filter(
-    (t) => t && t.id && t.album && t.album.release_date
-  );
+  const poolSize = Math.round(count * 1.5); // bucket waar we uit shufflen
+  const targetResults = Math.min(200, poolSize + 20); // wat we willen ophalen
+
   const seen = new Set();
-  items = items.filter((t) => {
-    if (seen.has(t.id)) return false;
-    seen.add(t.id);
-    return true;
-  });
-  if (items.length < 20) {
+  let items = [];
+  for (let offset = 0; items.length < targetResults && offset < 200; offset += 50) {
+    const limit = Math.min(50, targetResults - items.length);
+    const data = await spotifyApi(
+      '/search?q=' + q + '&type=track&limit=' + limit + '&offset=' + offset + '&market=NL'
+    );
+    const page = ((data && data.tracks && data.tracks.items) || []).filter(
+      (t) => t && t.id && t.album && t.album.release_date && !seen.has(t.id)
+    );
+    if (!page.length) break;
+    page.forEach((t) => seen.add(t.id));
+    items.push(...page);
+  }
+
+  if (items.length < count) {
     throw new Error(
-      'Te weinig Spotify-resultaten voor dit thema. Probeer een breder thema.'
+      'Te weinig Spotify-resultaten voor dit thema (' +
+        items.length +
+        ' gevonden, ' +
+        count +
+        ' nodig). Probeer een breder thema of minder kaartjes.'
     );
   }
+
   items.sort((a, b) => b.popularity - a.popularity);
+  const bucket = Math.min(poolSize, items.length);
   let pool;
-  if (difficulty === 'makkelijk') pool = items.slice(0, 30);
-  else if (difficulty === 'moeilijk') pool = items.slice(-30);
-  else pool = items.slice(10, 40);
+  if (difficulty === 'makkelijk') {
+    pool = items.slice(0, bucket);
+  } else if (difficulty === 'moeilijk') {
+    pool = items.slice(-bucket);
+  } else {
+    const start = Math.floor((items.length - bucket) / 2);
+    pool = items.slice(start, start + bucket);
+  }
   return shuffle(pool)
-    .slice(0, 20)
+    .slice(0, count)
     .map((t) => ({
       artist: (t.artists[0] && t.artists[0].name) || 'Onbekend',
       title: t.name,
@@ -668,16 +697,18 @@ async function startGame(startBtn, errorBox) {
   startBtn.appendChild(h('span', { class: 'spinner' }));
   startBtn.appendChild(h('span', { text: 'NUMMERS GENEREREN…' }));
 
+  const count = songCount();
+
   try {
     let songs;
     if (isSpotifyMode()) {
       // Lijst komt rechtstreeks uit Spotify Search.
-      songs = await generateSpotifySongList(theme, state.difficulty);
+      songs = await generateSpotifySongList(theme, state.difficulty, count);
     } else {
       const res = await fetch('/api/generate-songs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, difficulty: state.difficulty }),
+        body: JSON.stringify({ theme, difficulty: state.difficulty, count }),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -93,8 +93,8 @@ const DIFFICULTY_INSTRUCTIONS = {
     'underground, deep cuts and album tracks only dedicated fans would know. Avoid anything that crossed over to mainstream radio. Think critically acclaimed but commercially overlooked.',
 };
 
-function buildPrompt(theme, difficulty, difficultyInstruction) {
-  return `Generate exactly 20 songs for the music quiz theme: "${theme}".
+function buildPrompt(theme, difficulty, difficultyInstruction, count) {
+  return `Generate exactly ${count} songs for the music quiz theme: "${theme}".
 Difficulty: ${difficulty} — ${difficultyInstruction}
 
 Respond ONLY with a valid JSON array, no markdown, no explanation.
@@ -147,7 +147,7 @@ function parseSongs(text) {
 
 app.post('/api/generate-songs', generateLimiter, async (req, res) => {
   try {
-    const { theme, difficulty } = req.body || {};
+    const { theme, difficulty, count } = req.body || {};
 
     if (!theme || typeof theme !== 'string' || !theme.trim()) {
       return res.status(400).json({ error: 'Thema ontbreekt.' });
@@ -170,6 +170,12 @@ app.post('/api/generate-songs', generateLimiter, async (req, res) => {
         .status(400)
         .json({ error: 'Ongeldige moeilijkheidsgraad (makkelijk/normaal/moeilijk).' });
     }
+    const n = Number.isInteger(count) ? count : 20;
+    if (n < 1 || n > 150) {
+      return res
+        .status(400)
+        .json({ error: 'Ongeldig aantal nummers (1-150).' });
+    }
     if (!process.env.ANTHROPIC_API_KEY) {
       return res
         .status(500)
@@ -185,11 +191,12 @@ app.post('/api/generate-songs', generateLimiter, async (req, res) => {
 
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-7',
-      max_tokens: 2048,
+      // Genoeg ruimte voor max 150 songs (~60 tokens elk).
+      max_tokens: Math.min(9000, n * 60 + 500),
       messages: [
         {
           role: 'user',
-          content: buildPrompt(trimmedTheme, difficulty, difficultyInstruction),
+          content: buildPrompt(trimmedTheme, difficulty, difficultyInstruction, n),
         },
       ],
     });
