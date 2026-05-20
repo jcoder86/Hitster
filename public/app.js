@@ -85,7 +85,7 @@ const DIFFICULTIES = [
   { id: 'moeilijk', label: 'MOEILIJK', color: '#ef476f' },
 ];
 
-const SUGGESTIONS = ['90s Hip-Hop', 'Nederhop', 'Top2000', 'Metal'];
+const SUGGESTIONS = ['Nederhop', 'Top2000', 'Metal'];
 
 const state = {
   theme: '',
