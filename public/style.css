@@ -377,7 +377,7 @@ body {
   color: #1db954;
 }
 .spotify-corner-warn .spotify-corner-label {
-  color: var(--diff-red);
+  color: var(--text);
 }
 
 .spotify-corner-logout {

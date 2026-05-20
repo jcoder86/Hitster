@@ -461,7 +461,7 @@ function buildSpotifyCorner() {
   if (!state.spotify.isPremium) {
     return h('div', { class: 'spotify-corner spotify-corner-warn' }, [
       logo,
-      h('span', { class: 'spotify-corner-label', text: 'PREMIUM VEREIST' }),
+      h('span', { class: 'spotify-corner-label', text: 'GO PREMIUM' }),
       logoutBtn,
     ]);
   }
