@@ -1,0 +1,18 @@
+{
+  "name": "Hitster",
+  "short_name": "Hitster",
+  "description": "Digitale muziekquiz — raad nummers en rangschik kaartjes op jaartal",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0c10",
+  "theme_color": "#0c0c10",
+  "icons": [
+    {
+      "src": "hitster-app.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
